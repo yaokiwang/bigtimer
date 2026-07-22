@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>極致大字體多功能計時器</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #111; /* 深色背景襯托大字 */
+            color: #fff;
+            padding: 3vh 10px;
+            overflow: hidden;
+        }
+
+        /* 上方時間模式選擇區：自動換列以容納六個按鈕 */
+        .mode-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            max-width: 800px;
+            z-index: 10;
+        }
+
+        .btn-mode {
+            font-size: 1.2rem;
+            padding: 10px 18px;
+            cursor: pointer;
+            border: 2px solid #555;
+            background-color: rgba(255,255,255,0.1);
+            color: #ccc;
+            border-radius: 30px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .btn-mode.active {
+            background-color: #fff;
+            color: #000;
+            border-color: #fff;
+        }
+
+        /* 核心：佔滿螢幕的特大字體 */
+        .timer-display {
+            font-size: 25vw; /* 依寬度自動放大 */
+            line-height: 1;
+            font-weight: 900;
+            font-variant-numeric: tabular-nums; /* 防止數字抖動 */
+            user-select: none;
+            text-align: center;
+            width: 100%;
+            margin: auto 0;
+            letter-spacing: -0.05em;
+            transition: color 0.3s ease; /* 變色時平滑過渡 */
+        }
+
+        /* 顏色狀態定義 */
+        .status-normal { color: #ffffff; }
+        .status-warning { color: #ffcc00; } /* 最後1分鐘黃色 */
+        .status-danger { color: #ff3b30; }   /* 最後10秒紅色 */
+
+        /* 下方控制按鈕區 */
+        .control-buttons {
+            display: flex;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        .btn-control {
+            font-size: 1.3rem;
+            padding: 12px 30px;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            transition: opacity 0.2s;
+            min-width: 100px;
+        }
+
+        .btn-control:active {
+            opacity: 0.8;
+        }
+
+        #startBtn { background-color: #28a745; }
+        #pauseBtn { background-color: #ffc107; color: #000; }
+        #resetBtn { background-color: #dc3545; }
+
+        /* 時間到的閃爍動畫 */
+        .time-up {
+            animation: blink 0.5s infinite;
+        }
+
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.1; }
+            100% { opacity: 1; }
+        }
+
+        /* 直向螢幕（手機）優化，防止橫向爆框 */
+        @media (orientation: portrait) {
+            .timer-display {
+                font-size: 32vh; 
+            }
+            .btn-mode {
+                font-size: 1rem;
+                padding: 8px 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="mode-buttons" id="modeBtnContainer">
+        <button class="btn-mode" onclick="setDuration(2, this)">2 分鐘</button>
+        <button class="btn-mode" onclick="setDuration(2.5, this)">2.5 分鐘</button>
+        <button class="btn-mode active" onclick="setDuration(3, this)">3 分鐘</button> <button class="btn-mode" onclick="setDuration(5, this)">5 分鐘</button>
+        <button class="btn-mode" onclick="setDuration(10, this)">10 分鐘</button>
+        <button class="btn-mode" onclick="setDuration(15, this)">15 分鐘</button>
+    </div>
+
+    <div class="timer-display status-normal" id="display">03:00</div>
+
+    <div class="control-buttons">
+        <button class="btn-control" id="startBtn" onclick="startTimer()">開始</button>
+        <button class="btn-control" id="pauseBtn" onclick="pauseTimer()">暫停</button>
+        <button class="btn-control" id="resetBtn" onclick="resetTimer()">重置</button>
+    </div>
+
+<script>
+    let countdown;
+    let defaultMinutes = 3; // 預設 3 分鐘
+    let timeLeft = defaultMinutes * 60;
+    let isRunning = false;
+
+    const display = document.getElementById('display');
+
+    // 更新畫面與顏色邏輯
+    function updateDisplay() {
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = Math.round(timeLeft % 60);
+        display.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+        // 移除所有顏色狀態，根據剩餘時間重新套用
+        display.classList.remove('status-normal', 'status-warning', 'status-danger');
+
+        if (timeLeft <= 0) {
+            display.classList.add('status-danger'); // 時間到維持紅色並準備閃爍
+        } else if (timeLeft <= 10) {
+            display.classList.add('status-danger');  // 最後 10 秒紅色
+        } else if (timeLeft <= 60) {
+            display.classList.add('status-warning'); // 最後 1 分鐘黃色
+        } else {
+            display.classList.add('status-normal');  // 正常時間白色
+        }
+    }
+
+    // 切換時間模式
+    function setDuration(minutes, element) {
+        if (isRunning) {
+            clearInterval(countdown);
+            isRunning = false;
+        }
+        defaultMinutes = minutes;
+        timeLeft = minutes * 60;
+        
+        // 切換按鈕高亮
+        const buttons = document.querySelectorAll('.btn-mode');
+        buttons.forEach(btn => btn.classList.remove('active'));
+        element.classList.add('active');
+
+        display.classList.remove('time-up');
+        updateDisplay();
+    }
+
+    // 開始計時
+    function startTimer() {
+        if (isRunning || timeLeft <= 0) return;
+        
+        isRunning = true;
+        countdown = setInterval(() => {
+            timeLeft--;
+            updateDisplay();
+
+            if (timeLeft <= 0) {
+                clearInterval(countdown);
+                isRunning = false;
+                display.classList.add('time-up'); // 觸發閃爍
+                setTimeout(() => { alert('時間到！'); }, 100);
+            }
+        }, 1000);
+    }
+
+    // 暫停計時
+    function pauseTimer() {
+        clearInterval(countdown);
+        isRunning = false;
+    }
+
+    // 重置計時器
+    function resetTimer() {
+        clearInterval(countdown);
+        isRunning = false;
+        timeLeft = defaultMinutes * 60;
+        display.classList.remove('time-up');
+        updateDisplay();
+    }
+
+    // 頁面載入時初始化
+    updateDisplay();
+</script>
+
+</body>
+</html>
