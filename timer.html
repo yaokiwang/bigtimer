@@ -23,13 +23,13 @@
             overflow: hidden;
         }
 
-        /* 上方時間模式選擇區：自動換列以容納六個按鈕 */
+        /* 上方時間模式選擇區：七個按鈕自動自動換列與對齊 */
         .mode-buttons {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
             gap: 10px;
-            max-width: 800px;
+            max-width: 900px;
             z-index: 10;
         }
 
@@ -108,7 +108,7 @@
             100% { opacity: 1; }
         }
 
-        /* 直向螢幕（手機）優化，防止橫向爆框 */
+        /* 直向螢幕（手機）優化 */
         @media (orientation: portrait) {
             .timer-display {
                 font-size: 32vh; 
@@ -122,16 +122,21 @@
 </head>
 <body>
 
+    <!-- 1. 七個時間選擇按鈕 -->
     <div class="mode-buttons" id="modeBtnContainer">
         <button class="btn-mode" onclick="setDuration(2, this)">2 分鐘</button>
         <button class="btn-mode" onclick="setDuration(2.5, this)">2.5 分鐘</button>
-        <button class="btn-mode active" onclick="setDuration(3, this)">3 分鐘</button> <button class="btn-mode" onclick="setDuration(5, this)">5 分鐘</button>
+        <button class="btn-mode active" onclick="setDuration(3, this)">3 分鐘</button> <!-- 預設 3 分鐘 -->
+        <button class="btn-mode" onclick="setDuration(4, this)">4 分鐘</button>
+        <button class="btn-mode" onclick="setDuration(5, this)">5 分鐘</button>
         <button class="btn-mode" onclick="setDuration(10, this)">10 分鐘</button>
         <button class="btn-mode" onclick="setDuration(15, this)">15 分鐘</button>
     </div>
 
+    <!-- 2. 佔滿螢幕的大字 -->
     <div class="timer-display status-normal" id="display">03:00</div>
 
+    <!-- 3. 控制按鈕 -->
     <div class="control-buttons">
         <button class="btn-control" id="startBtn" onclick="startTimer()">開始</button>
         <button class="btn-control" id="pauseBtn" onclick="pauseTimer()">暫停</button>
